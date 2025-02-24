@@ -1,0 +1,35 @@
+엔티티와 매핑 (2025.02.24)
+
+<property name=“hibernate.hbm2ddl.auto” value=" " />. // 데이터 베이스 스키마 자동생성 설정  개발단계에서만 사용 추천
+개발 초기 단계에는 create, update, 테스트 서버는 update or validate	스테이징과 운영서버는 validate, none
+일반적으로 validate 이외의 다른 것들은 사용안하는것 추천
+
+@column 으로 개별로 데이터베이스에 제약조건 설정 가능 -> jpa에 영향을 주는게 아니고 제약조건만 추가해주는거라 어플리케이션에 영향을 미치치않음
+@Column
+	name - 필드와 매핑할 테이블의 컬럼 이름
+	insertable,updatable - 해당 컬럼의 등록, 변경 가능 여부 기본값은 true
+	nullable(ddl) - not null 제약조건이 걸림(false로 변경시)
+	unique(ddl) - 간단한 제약조건을 걸어줄때 사용, 자주 사용하진않음
+	length - 문자길이 제약조건
+	columnDefinition - 데이터베이스 컬럼 정보를 직접 설정
+	precision,scale(ddl) - bigdecimal 사용시 소숫점 제한 등 큰 수에 제약조건을 걸기위해 사용
+
+
+요구사항 추가
+@Enumerated -> 고정된 값들을 표현하기 위한 어노테이션 (ex.) 남 , 여.   User/ admin 등)
+			       Default는 ordinal(enum순서를 데이터베이스에 저장), string(이름을 데이터베이스에 저장)
+@Temporal -> 날짜, 시간, 날짜시간 모두 포함 , localdate, localdatetime이 들어오면서 생략이 가능함
+@Lob -> varchar이상의 큰 것들을 표현하기 위함
+@Transient -> db에 반영되지않고 메모리에서만 사용하려고할때
+
+기본 키 매핑 방식
+	직접 할당 - @ID
+	자동 생성 - @GeneratedValue -  Default는 auto
+							      Identity - 영속성 콘텍스트를 관리하기 위해서는 pk값 필요하지만 이 전략은 db에 접근해야만 pk값을 알수있음
+									       em.persist 시점에 insert query를 보냄 (원래는 커밋시에 insert query를 보냄)
+							      SequenceGenerator - allocationSize를 통해 미리 pk를 받아 성능 최적화 가능
+
+							      Table - 운영상에 있어서 비효율적이라 자주 사용하진 않음, InitialValue, allocationSzie를 시퀀스와 마찬가지
+	권장하는 식별자 전략 - 기본 키 제약 조건 : null아님, 유일, 변하면 안됨
+					   권장 - long형, 대체키, 키 생성 전략 사용 -> 비즈니스와 전혀 상관없는 generate value나 랜덤값 같은 키를 쓰는걸 권장
+			  										 -> Auto-increment or Sequence-object 사용 권장
