@@ -10,19 +10,32 @@ public class JpaMain {
 
         EntityManagerFactory emf = Persistence.createEntityManagerFactory("hello");
         EntityManager em = emf.createEntityManager();
-        //code
+
 
         EntityTransaction tx = em.getTransaction();
         tx.begin();
 
         try {
 
+
+
+            Team team = new Team();
+            team.setName("Team1");
+            em.persist(team);
+
             Member member = new Member();
-
-            member.setUsername("C");
-
+            member.setUsername("Member1");
+            member.setTeam(team);
             em.persist(member);
 
+            em.flush();
+            em.clear();
+
+            Team findTeam = em.find(Team.class, team.getId());
+            List<Member> members = findTeam.getMembers();
+            for (Member m : members) {
+                System.out.println(m.getUsername());
+            }
 
 
             tx.commit();
