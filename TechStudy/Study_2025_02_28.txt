@@ -1,0 +1,80 @@
+프록시와 연관관계 관리
+
+프록시 기초
+em.find() - 데이터 베이스를 통해서 실제 엔티티 객체 조회
+em.getReference() - 데이터베이스 조회를 미루는 가짜 엔티티 객체 조회, db에 쿼리가 날라가지않지만 조회가 가능함
+				    프록시에서 가져오는 가짜 클래스임
+
+프록시 특징 -  실제 클래스를 상속받아서 만들어짐
+		      실제 클래스와 겉 모양이 같음
+		      사용하는 입장에서 진짜 객체인지 프록시 객체인지 구분하지않고 사용하면 됨
+		      실제 객체의 참조를 보관
+		      처음 사용할때 한번만 초기화함 -> 여러번 불러도 초기화 안됨
+		      초기화 시에, 실제 엔티티로 바뀌는것은 아님, 실제 엔티티에 접근하는것임
+		      비교시에는 instance of 사용해야함(타입 체크 시에)
+		      영속성 컨텍스트에 찾는 엔티티가 이미 있으면 em.Reference()를 호출해도 실제 엔티티반환 - 이미 올라가있는걸 프록시로 가져오는건  																				  비 효율적
+		      한번 em.getReference() 후에는 em.find해도 클래스는 프록시로 동일
+Member refMember = em.getReference(Member.class, member.getId());
+System.out.println(refMember.getClass());
+
+Member findMember = em.find(Member.class, member.getId());
+System.out.println(findMember.getClass());
+
+System.out.println((refMember == findMember));
+결과는 true가 나오도록 jpa가 설정되어있음
+
+			영속성 콘텍스트의 도움을 받을 수 없는 준영속 상태일때, 프록시를 초기화하면 문제가 발생
+
+
+프록시 객체 초기화 과정 - 프록시 생성 -> 영속성 콘텍스트에 초기화 요청 -> db조회 -> 실제 엔티티 생성 -> 엔티티에서 참조해서 가져옴
+
+프록시 확인
+프록시 인스턴스의 초기화 여부 확인
+emf(엔티티 매니저 팩토리).getPersistenceUnitUtil.isLoaded(Object entity)
+프록시 클래스 확인 방법
+Entity.getClass().getName() 출력
+프록시 강제 초기화
+org.hibernate.Hibernate.initialize(entity); 하이버네이트가 하는거임 - JPA기준으로는 강제 초기화 존재하지 않음 (강제 호출 - member.getName())
+getReference는 많이 사용하진 않음
+
+지연 로딩(LAZY)를 통해서 프록시로 조회
+@ManyToOne(fetch = FetchType.LAZY) 이런 방식으로 사용가능
+
+자주 사용하는 경우엔 즉시로딩사용
+@ManyToOne(fetch = FetchType.EAGER)을 통해서 호출하고 이땐 프록시를 사용하는게 아니라 조인을 통해서 한꺼번에 가져옴
+
+프록시와 즉시로딩 주의사항
+실무에선 즉시로딩 권장하지 않음 -> 즉시 로딩을 적용하면 예상하지못한 SQL이 발생 = 성능저하
+가급적이면 지연 로딩만 사용
+@ManyToOne, @OneToOne은 기본이 즉시로딩이라 LAZY로 설정해야함
+
+영속성 전이 : CASCADE
+특정 엔티티를 영속 상태로 만들때 연관된 엔티티도 함께 영속 상태로 만들고 싶을때 사용. 로딩이나 프록시와의 연관관계와 아무 상관없음 cascade = CascadeType.ALL를 mappedBy 조건 내에  연관된 엔티티도 한꺼번에 persist 가능
+
+영속성 전이 주의사항
+영속성 전이는 연관관계를 매핑하는 것과 아무관련이 없음
+엔티티 영속시에 연관된 엔티티도 영속화하는 편리함만 제공
+연관된 엔티티의 소유자가 한명일때 영속성 전이를 사용해야함 다른곳에서도 연관된 엔티티를 관리하고있을땐 영속성 - 단일엔티티에 완전 종속될때
+Life cycle 이 동일할때, 단일 소유자일때 사용해야함
+
+CASCADE 종류
+All - 모두 적용
+Persist - 영속
+Remove- 삭제
+Merge - 병합
+Refresh -
+Detach -
+
+
+고아 객체
+부모 엔티티와 연관관계가 끊어진 자식 엔티티를 자동으로 삭제하는것
+OrphanRemoval = true or false  로 설정함
+
+고아 객체 주의사항
+참조가 제거된 엔티티는 다른곳에서 참조하지 않는 고아 객체로 보고 삭제가능
+참조하는 곳이 한곳일때만 사용, 특정 엔티티가 개인의 소유일때 사용
+@OneToOne, @OneToMany일때만 사용가능
+
+영속성 전이 + 고아객체(CasecadeType.ALL + orphanRemovel=true)
+스스로 생명주기를 관리하는 엔티티는 em.persist, em.remove로 제거
+두 옵션을 활성화하면 부모엔티티를 통해서 자식의 생명주기를 관리할수있음
